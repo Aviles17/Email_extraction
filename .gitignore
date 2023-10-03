@@ -1,0 +1,6 @@
+#Ignore CSV files
+*.csv 
+#Ignore JSON Credentials and private keys
+*.json 
+#Ignore Pycache
+__pycache__/
