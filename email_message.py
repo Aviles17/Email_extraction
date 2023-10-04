@@ -19,7 +19,17 @@ class email_message:
     
     #Define how does the str function works
     def __str__(self):
-        return f"ID: {self.id}, Subject: {self.subject}, By: {self.by_name}, ByEmail: {self.by_email}, Snippet: {self.snippet}, Message_len: {len(self.message)}"
+        return f'''ID: {self.id},
+     
+Subject: {self.subject}, 
+
+By: {self.by_name}, 
+
+ByEmail: {self.by_email},
+ 
+Snippet: {self.snippet}, 
+
+Message: {self.message}'''
 
     #Define decompose function
     def decompose(self, by: str):
@@ -29,7 +39,7 @@ class email_message:
             email = self.get_domain(parts[1][:-1])
             return name, email
         else:
-            return None, None
+            return by, by
         
     def get_domain(self, email: str):
         pattern = r'@([\w.-]+)'

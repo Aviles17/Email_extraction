@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 import re
 import nltk 
 from nltk.corpus import stopwords
+from email_message import email_message
 
 
 # If modifying these scopes, delete the file token.json.
@@ -86,14 +87,13 @@ def get_messages(service, num_messages: int):
                 decoded_data = base64.b64decode(data)
                 soup = BeautifulSoup(decoded_data , "lxml")
                 body = soup.body()
-                #Añadir registros al diccionario
-                message_dict['ID'] = message_id
-                message_dict['Subject'] = asunto
-                message_dict['From'] = remitente
-                message_dict['Snippet'] = content['snippet']
-                message_dict['Message'] = clean_string(str(body[0]))
+                
                 #Añadir registro de correo a lista
-                message_list.append(message_dict)
+                message = email_message(message_id, asunto, remitente, content['snippet'], clean_string(str(body[0])))
+                if forwarded_message(message.message):
+                    message = manage_forwarded(message)
+                    
+                message_list.append(message)
                 
             except Exception as e:
                 print(e)
@@ -105,7 +105,124 @@ def get_messages(service, num_messages: int):
     except HttpError as error:
         # TODO(developer) - Handle errors from gmail API.
         print(f'An error occurred: {error}')
+        
+        
+def clean_string(string: str):
+    
+    string = re.sub(r'<[^>]*>', '', string)
+    
+    # Remove links (URLs)
+    string= re.sub(r'https?://\S+', '', string)
+    
+    # Remove double white spaces
+    string = re.sub(r'\s+', ' ', string).strip()
+    
+    return string.split()
 
+
+def forwarded_message(message_content: list):
+    
+    for word in message_content:
+        if word == 'Forwarded':
+            return True
+    return False
+
+
+def manage_forwarded(message: email_message):
+    message = clean_forward_message_format(message)
+    print(message)
+
+def clean_forward_message_format(message: email_message):
+        #Create list with the order of the message
+    order = [('De:','From:'), ('Date:', 'Dia:'), ('Subject:', 'Asunto:'), ('To:', 'Para:')]
+    specific_symbols = ('----------','---------','------------------------------','Forwarded', 'message')
+    new_Message = []
+    index = 0
+    forwarded_part = False
+    while index < len(message.message):
+        if message.message[index] in order[0]:
+            new_Message.clear()
+            new_index = index + 1
+            new_from = ""
+            while message.message[new_index] not in order[1]:
+                new_from += message.message[new_index] + " "
+                new_index += 1
+                
+            new_index += 1
+            new_Date = ""
+            while message.message[new_index] not in order[2]:
+                new_Date += message.message[new_index] + " "
+                new_index += 1
+                
+            new_index += 1
+            new_Subject = ""
+            while message.message[new_index] not in order[3]:
+                new_Subject += message.message[new_index] + " "
+                new_index += 1
+                
+            index = new_index + 1
+        else:
+            if message.message[index] in specific_symbols:
+                forwarded_part = True
+            else:
+                if forwarded_part:
+                    new_Message.append(message.message[index].lower())
+            index += 1
+    
+    message.subject = new_Subject.strip()
+    #Call function to standarize the from message
+    message.by_email = new_from.strip()
+    message.by_name = new_from.strip()
+    message.message = clean_forwarded_message(new_Message)
+    
+    return message
+    
+    
+def clean_forwarded_message(message: list):
+    #Crear nueva lista de palabras
+    new_word_bag = []
+    for word in message:
+        #Crear directorios con strings predeterminados para limpiar
+        text_symbols = ['+', '-', '*', '/', '%','==', '!=', '<', '>', '<=', '>=','=', '+=', '-=', 
+                        '*=', '/=', '%=','&', '|', '^', '~', '<<', '>>',',', ':', ';', '.', '(', ')'
+                        '[',']', '{', '}', ':']
+        delete_word = False
+        #Revise stopwords with nltk
+        if not delete_word:
+            stopwords = get_stopwords('spanish')
+                
+            for stopword in stopwords:
+                if str(stopword) == word:
+                    delete_word = True
+                    break
+        #Revise text symbols in unitary form
+        if not delete_word:
+            for symbol in text_symbols:
+                if symbol == word:
+                    delete_word = True
+                    break
+                
+        #Revise if there is a extra email in the word_bag
+        if not delete_word:
+            if '@' in list(word):
+                delete_word = True
+            
+        #If it passes all filters add to the new bag of words
+        if not delete_word:
+            new_word_bag.append(word.lower())
+                
+        
+    return new_word_bag
+            
+
+if __name__ == '__main__':
+    email_number = input('Ingrese la cantidad de mensajes que quiere revisar (MAX: 200, MIN: 1)')
+    user = gmail_credentials('credentials-unimed.json')
+    emails = get_messages(user, int(email_number))
+    
+
+
+'''
 
 def clean_string(string: str):
     
@@ -248,4 +365,6 @@ def from_standarization(working_string: str):
     
 if __name__ == '__main__':
     print("This is a functional file, it shouldn't have any output")
+
+'''
         
