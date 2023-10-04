@@ -21,13 +21,13 @@ class email_message:
     def __str__(self):
         return f'''ID: {self.id},
      
-Subject: {self.subject}, 
+Subject: {self.subject} 
 
-By: {self.by_name}, 
+By: {self.by_name} 
 
-ByEmail: {self.by_email},
+ByEmail: {self.by_email}
  
-Snippet: {self.snippet}, 
+Snippet: {self.snippet} 
 
 Message: {self.message}'''
 
@@ -50,5 +50,7 @@ Message: {self.message}'''
             return domain
         else:
             return email
+        
+        
     
         

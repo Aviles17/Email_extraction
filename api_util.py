@@ -130,6 +130,7 @@ def forwarded_message(message_content: list):
 
 def manage_forwarded(message: email_message):
     message = clean_forward_message_format(message)
+    
     print(message)
 
 def clean_forward_message_format(message: email_message):
@@ -209,11 +210,21 @@ def clean_forwarded_message(message: list):
             
         #If it passes all filters add to the new bag of words
         if not delete_word:
-            new_word_bag.append(word.lower())
+            new_word_bag.append(delete_extra_symbols(word.lower()))
                 
         
     return new_word_bag
             
+def delete_extra_symbols(working_string: str):
+    pattern = r'^[*,.\-]*([\w\s]+)[*,.\-]*$'
+    match = re.match(pattern, working_string)
+    
+    if match:
+        clean_string = match.group(1)
+        return clean_string
+    else:
+        return working_string
+    
 
 if __name__ == '__main__':
     email_number = input('Ingrese la cantidad de mensajes que quiere revisar (MAX: 200, MIN: 1)')
