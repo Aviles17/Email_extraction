@@ -11,10 +11,10 @@ def manage_csv_file(path: str, email_list: list):
             # If the file is empty, write the records from the list to it
             with open(path, 'w', newline='') as csv_file:
                 csv_writer = csv.writer(csv_file)
-                csv_writer.writerow(['ID', 'Subject', 'Name', 'Email', 'Snippet','Message','Label'])  # Write header
+                csv_writer.writerow(['ID', 'Subject', 'Name', 'Email','Message','Label'])  # Write header
                 for email in email_list:
                     if isinstance(email, email_message):
-                        csv_writer.writerow([email.id, email.subject, email.by_name, email.by_email, email.snippet, email.message, email.label])
+                        csv_writer.writerow([email.id, email.subject, email.by_name, email.by_email, email.message, email.label])
             return "Added registers correctly"
         else:
             # If the file is not empty, append records that are not repeated from the list to the csv
@@ -23,9 +23,9 @@ def manage_csv_file(path: str, email_list: list):
                 csv_reader = csv.reader(csv_file)
                 next(csv_reader)
                 for row in csv_reader:
-                    id_num, subject, name, name_e, snippet, message, label = row
+                    id_num, subject, name, name_e, message, label = row
                     by = f"{name} <{name_e}>"
-                    message = email_message(id_num, subject, by, snippet, message, label)
+                    message = email_message(id_num, subject, by, message, label)
                     existing_records.append(message)
                     
             add_records = []
@@ -42,7 +42,7 @@ def manage_csv_file(path: str, email_list: list):
                 with open(path, 'a', newline='') as csv_file:
                     csv_writer = csv.writer(csv_file)
                     for email in add_records:
-                        csv_writer.writerow([email.id, email.subject, email.by_name, email.by_email, email.snippet, email.message, email.label])
+                        csv_writer.writerow([email.id, email.subject, email.by_name, email.by_email, email.message, email.label])
                         
                 return f"Added {len(add_records)} registers correctly"
             else:
@@ -54,24 +54,10 @@ def manage_csv_file(path: str, email_list: list):
             
             return manage_csv_file(path, email_list)
 
-
-def transform_list_to_email_list(email_list: list):
-    
-    new_list = []
-    
-    for email in email_list:
-        e = email_message(email.get('ID'), email.get('Subject'), email.get('From'), email.get('Snippe'), email.get('Message'))
-        new_list.append(e)
-    return new_list
     
 if __name__ == '__main__':
     PATH = 'train_database.csv'
     email_number = input('Ingrese la cantidad de mensajes que quiere revisar (MAX: 200, MIN: 1)')
     user = au.gmail_credentials('credentials-unimed.json')
     emails = au.get_messages(user, int(email_number))
-    emails = au.clean_messages(emails)
-    for email in emails:
-        print(email)
-        print("")
-    #emails = transform_list_to_email_list(emails)
-    #print(manage_csv_file(PATH, emails))
+    print(manage_csv_file(PATH, emails))

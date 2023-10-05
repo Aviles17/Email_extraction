@@ -50,7 +50,13 @@ Message: {self.message}'''
             return domain
         else:
             return email
-        
+    
+    def check_data_integrity(self):
+        if self.by_email == self.by_name:
+            if '@' in self.by_email:
+                self.by_name = None
+            else:
+                self.by_email = None
         
     
         

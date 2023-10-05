@@ -130,8 +130,11 @@ def forwarded_message(message_content: list):
 
 def manage_forwarded(message: email_message):
     message = clean_forward_message_format(message)
+    message = update_email_author(message)
+    message.check_data_integrity()
+    return message
     
-    print(message)
+    
 
 def clean_forward_message_format(message: email_message):
         #Create list with the order of the message
@@ -225,157 +228,47 @@ def delete_extra_symbols(working_string: str):
     else:
         return working_string
     
+def update_email_author(message: email_message):
+    if message.by_name == message.by_email:
+        if ';' in message.by_name:
+            try:
+                #Manage domain email part
+                mail_index = message.by_email.index('@')
+                new_mail = message.by_email[mail_index:]
+                message.by_email = new_mail[:-1]
+                #Manage name part
+                name_index = message.by_name.index(';')
+                new_name = message.by_name[:name_index]
+                message.by_name = new_name
+            except ValueError:
+                return message
+            finally:
 
-if __name__ == '__main__':
-    email_number = input('Ingrese la cantidad de mensajes que quiere revisar (MAX: 200, MIN: 1)')
-    user = gmail_credentials('credentials-unimed.json')
-    emails = get_messages(user, int(email_number))
-    
-
-
-'''
-
-def clean_string(string: str):
-    
-    string = re.sub(r'<[^>]*>', '', string)
-    
-    # Remove links (URLs)
-    string= re.sub(r'https?://\S+', '', string)
-    
-    # Remove double white spaces
-    string = re.sub(r'\s+', ' ', string).strip()
-    
-    return string.split()
-
-
-def forwarded_message(message: dict):
-    word_bag = message['Message']
-    for word in word_bag:
-        if word == 'Forwarded':
-            return True
-    return False
-    
-    
-def clean_messages(messages: list):
-    for index, message in enumerate(messages):
-        if forwarded_message(message):
-            #Call function to update the state of the message params
-            message = update_forwarded_message(message)
-        #Crear directorios con strings predeterminados para limpiar
-        text_symbols = ['+', '-', '*', '/', '%','==', '!=', '<', '>', '<=', '>=','=', '+=', '-=', 
-                        '*=', '/=', '%=','&', '|', '^', '~', '<<', '>>',',', ':', ';', '.', '(', ')'
-                        '[',']', '{', '}', ':']
-            
-        #Crear nueva lista de palabras
-        new_word_bag = []
-        for word in message['Message']:
-            delete_word = False
-            #Revise stopwords with nltk
-            if not delete_word:
-                stopwords = get_stopwords('spanish')
-                
-                for stopword in stopwords:
-                    if str(stopword) == word:
-                        delete_word = True
-                        break
-            #Revise text symbols i unitary form
-            if not delete_word:
-                for symbol in text_symbols:
-                    if symbol == word:
-                        delete_word = True
-                        break
-            #If it passes all filters add to the new bag of words
-            if not delete_word:
-                new_word_bag.append(word.lower())
-                
-        message['Message'] = clean_word_regex(new_word_bag, text_symbols)
-        messages[index] = message
-        
-    return messages
-            
-     
-def update_forwarded_message(message: dict):
-    
-    #Create list with the order of the message
-    order = [('De:','From:'), ('Date:', 'Dia:'), ('Subject:', 'Asunto:'), ('To:', 'Para:')]
-    specific_symbols = ('----------','---------','------------------------------','Forwarded', 'message')
-    new_Message = []
-    index = 0
-    forwarded_part = False
-    while index < len(message['Message']):
-        if message['Message'][index] in order[0]:
-            new_Message.clear()
-            new_index = index + 1
-            new_from = ""
-            while message['Message'][new_index] not in order[1]:
-                new_from += message['Message'][new_index] + " "
-                new_index += 1
-                
-            new_index += 1
-            new_Date = ""
-            while message['Message'][new_index] not in order[2]:
-                new_Date += message['Message'][new_index] + " "
-                new_index += 1
-                
-            new_index += 1
-            new_Subject = ""
-            while message['Message'][new_index] not in order[3]:
-                new_Subject += message['Message'][new_index] + " "
-                new_index += 1
-                
-            index = new_index + 1
+                return message
         else:
-            if message['Message'][index] in specific_symbols:
-                forwarded_part = True
-            else:
-                if forwarded_part:
-                    new_Message.append(message['Message'][index].lower())
-            index += 1
-    
-    message['Subject'] = new_Subject.strip()
-    #Call function to standarize the from message
-    message['From'] = from_standarization(new_from.strip())
-    message['Message'] = new_Message
-    
-    new_snippet = ""
-    for index, word in enumerate(new_Message):
-        if index >= 9:
-            break
-        new_snippet += word + " "
-    
-    message['Snippet'] = new_snippet.strip()
-    
-    return message
-
-
-def clean_word_regex(word_bag: list, special_characters: list):
-    
-    new_word_bag = []
-    for word in word_bag:
-        first = word[0]
-        last = word[-1]
-        if first in special_characters:
-            word = word[1:]
-        if last in special_characters:
-            word = word[:-1]
-        new_word_bag.append(word)         
-    
-    if len(new_word_bag) != 0:
-        return new_word_bag
+            #Find if the pattern is hidden in the snipet
+            name_split = message.by_name.split()
+            try:
+                index = message.snippet.index(name_split[-1])
+                cont = 0
+                new_email = ""
+                while cont < 2:
+                    if message.snippet[index] == ';':
+                        cont += 1
+                    if message.snippet[index] != ';' and cont > 0:
+                        new_email += message.snippet[index]
+                    index += 1
+                mail_index = new_email.index('@')
+                message.by_email = new_email[mail_index:]
+            except ValueError:
+                message.by_email = None
+                     
+            finally:
+                return message     
     else:
-        raise ValueError 
-
-
-def from_standarization(working_string: str):
-    
-    if ';' in working_string:
-        parts = working_string.split(';')
-        return f"{parts[0]} <{parts[1].strip()}>"
-    else:
-        return working_string
+        return message
     
 if __name__ == '__main__':
-    print("This is a functional file, it shouldn't have any output")
-
-'''
+    print("This file is a module that only provides functionality")
+    
         
